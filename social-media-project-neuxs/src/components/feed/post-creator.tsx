@@ -3,9 +3,7 @@
 import type React from "react"
 
 import { useState } from "react"
-import { useMutation } from "@apollo/client"
-import { CREATE_POST } from "@/lib/graphql/mutation"
-import { GET_POSTS } from "@/lib/graphql/queries"
+import { createPost, getPost, deletePost } from "@/utils/ayrshareApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,39 +19,53 @@ export default function PostCreator() {
   const [isUploading, setIsUploading] = useState(false)
   const [isMediaDialogOpen, setIsMediaDialogOpen] = useState(false)
   const [mediaType, setMediaType] = useState<"photo" | "video" | null>(null)
-  const { toast } = useToast()
+  const toast  = useToast()
 
-  const [createPost, { loading }] = useMutation(CREATE_POST, {
-    onCompleted: () => {
-      setContent("")
-      setImageUrl("")
-      toast({
-        title: "Post created",
-        description: "Your post has been published successfully!",
-      })
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Failed to create post",
-        description: error.message || "Please try again later",
-      })
-    },
-    refetchQueries: [{ query: GET_POSTS }],
-  })
 
+const [postText, setPostText] = useState("");
+  const [postId, setPostId] = useState("");
+  const [socialMedia, setSocialMedia] = useState(["twitter"]);
+  const [postDetails, setPostDetails] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleCreatePost = async () => {
+    setLoading(true);
+    try {
+      const newPost = await createPost(postText, socialMedia);
+      setPostId(newPost.id);
+      setPostDetails(newPost);
+    } catch (error) {
+      alert("Failed to create post!");
+    }
+    setLoading(false);
+  };
+
+  const handleGetPost = async () => {
+    setLoading(true);
+    try {
+      const post = await getPost(postId);
+      setPostDetails(post);
+    } catch (error) {
+      alert("Failed to fetch post!");
+    }
+    setLoading(false);
+  };
+
+  const handleDeletePost = async () => {
+    setLoading(true);
+    try {
+      await deletePost(postId);
+      setPostDetails(null);
+      alert("Post deleted successfully!");
+    } catch (error) {
+      alert("Failed to delete post!");
+    }
+    setLoading(false);
+  };
   const handleSubmit = () => {
     if (!content.trim() && !imageUrl) return
 
-    createPost({
-      variables: {
-        input: {
-          content,
-          mediaUrl: imageUrl || null,
-          mediaType: imageUrl ? "image" : null,
-        },
-      },
-    })
+   
   }
 
   const handleMediaClick = (type: "photo" | "video") => {

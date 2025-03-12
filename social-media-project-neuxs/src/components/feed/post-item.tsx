@@ -1,8 +1,7 @@
 "use client"
+import axios from "axios";
 
 import { useState } from "react"
-import { useMutation } from "@apollo/client"
-import { LIKE_POST, UNLIKE_POST, ADD_COMMENT } from "@/lib/graphql/quries"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
-
+import {addLike} from "@/utils/ayrshareApi"
 interface Author {
   id: string
   name: string
@@ -43,72 +42,37 @@ export default function PostItem({ post }: { post: Post }) {
   const [isCommenting, setIsCommenting] = useState(false)
   const [comment, setComment] = useState("")
   const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const [likePost] = useMutation(LIKE_POST, {
-    onError: () => {
-      setLiked(false)
-      setLikesCount((prev) => prev - 1)
-      toast({
-        variant: "destructive",
-        title: "Failed to like post",
-        description: "Please try again later",
-      })
-    },
-  })
+  const handleLikeToggle = async () => {
+    try {
+      setLiked(!liked)
+      setLikesCount((prev) => (liked ? prev - 1 : prev + 1))
 
-  const [unlikePost] = useMutation(UNLIKE_POST, {
-    onError: () => {
-      setLiked(true)
-      setLikesCount((prev) => prev + 1)
-      toast({
-        variant: "destructive",
-        title: "Failed to unlike post",
-        description: "Please try again later",
-      })
-    },
-  })
-
-  const [addComment, { loading: isAddingComment }] = useMutation(ADD_COMMENT, {
-    onCompleted: () => {
-      setComment("")
-      setIsCommenting(false)
-      toast({
-        title: "Comment added",
-        description: "Your comment has been added successfully!",
-      })
-    },
-    onError: () => {
-      toast({
-        variant: "destructive",
-        title: "Failed to add comment",
-        description: "Please try again later",
-      })
-    },
-  })
-
-  const handleLikeToggle = () => {
-    if (liked) {
-      setLiked(false)
-      setLikesCount((prev) => prev - 1)
-      unlikePost({ variables: { postId: post.id } })
-    } else {
-      setLiked(true)
-      setLikesCount((prev) => prev + 1)
-      likePost({ variables: { postId: post.id } })
+      await addLike()
+    } catch (error) {
+      console.error("Error liking post:", error)
+      setLiked(!liked) // Revert state on failure
+      setLikesCount((prev) => (liked ? prev + 1 : prev - 1))
+      toast({ title: "Error", description: "Could not like post", variant: "destructive" })
     }
   }
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     if (!comment.trim()) return
+    setIsSubmitting(true)
 
-    addComment({
-      variables: {
-        input: {
-          postId: post.id,
-          content: comment,
-        },
-      },
-    })
+    try {
+      await axios.post(`/api/posts/${post.id}/comment`, { content: comment })
+      toast({ title: "Success", description: "Comment added" })
+      setComment("")
+      setIsCommenting(false)
+    } catch (error) {
+      console.error("Error adding comment:", error)
+      toast({ title: "Error", description: "Failed to add comment", variant: "destructive" })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -195,7 +159,7 @@ export default function PostItem({ post }: { post: Post }) {
         comment={comment}
         setComment={setComment}
         onSubmit={handleAddComment}
-        isSubmitting={isAddingComment}
+        isSubmitting={isSubmitting}
         post={post}
       />
     </article>

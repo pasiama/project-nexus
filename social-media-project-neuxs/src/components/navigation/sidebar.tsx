@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"

@@ -1,3 +1,6 @@
+"use client";
+
+
 import type { ReactNode } from "react"
 import Sidebar from "@/components/navigation/sidebar"
 import RightSidebar from "@/components/navigation/right-sidebar"

@@ -1,13 +1,35 @@
-import { useQuery } from "@apollo/client"
-import { GET_POSTS } from "@/lib/graphql/queries"
+"use client";
+
 import PostCreator from "./post-creator"
 import PostItem from "./post-item"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import {useState, useEffect} from "react"
+import axios from "axios";
 
 export default function Feed() {
-  const { data, loading, error } = useQuery(GET_POSTS)
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const data = await axios.get("https://api.ayrshare.com/api/posts"); // Replace with your actual API endpoint
+        setPosts(data.data.posts); // Assuming your API response has a `posts` array
+        console.log("data", data)
+        return data
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, []);
 
   return (
     <div className="divide-y divide-gray-200">
@@ -22,12 +44,12 @@ export default function Feed() {
         </Alert>
       )}
 
-      {data?.posts.map((post: any) => (
+      {/* {data?.posts.map((post: any) => (
         <PostItem key={post.id} post={post} />
-      ))}
+      ))} */}
 
       {/* Fallback demo posts if no data */}
-      {!loading && !error && (!data || data.posts.length === 0) && (
+      {!loading && !error && (
         <>
           <PostItem
             post={{
